@@ -1,0 +1,8 @@
+domain,start,end,color,pymol color
+Putative Capping Pore nsP1,1,450,#0000b6,blue
+Metal Binding Domain nsP2,507,680,#02eded,green
+HVR,705,830,#ab0000,red
+duplication,733,783,#ad4a63,raspberry
+Macro Domain nsP3,831,979,#e1e100,cyan
+Helicase nsP4,982,1261,#e77504,orange
+RdRp nsP5,1280,1738,#7a147a,magenta

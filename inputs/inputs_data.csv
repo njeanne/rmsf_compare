@@ -1,0 +1,4 @@
+condition,RMSF files directory,color
+insertions,inputs/ORF1/insertions,#fc030b
+duplications,inputs/ORF1/duplications,#eb8c34
+WT,inputs/ORF1/WT,#0303fc
