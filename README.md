@@ -36,7 +36,7 @@ The script can be tested with the data in the `test` directory, choosing the med
 ```shell script
 conda activate rmsf_compare
 
-DOMAIN="Macro Domain"
+DOMAIN="Putative Capping Pore"
 DOMAIN_WITHOUT_SPACES="${DOMAIN// /-}"
 
 ./rmsf_compare.py --out results --annotations inputs/annotations --domain "$DOMAIN" --md-time 1020 \
@@ -111,7 +111,9 @@ The annotation CSV (comma separated) file format is:
 |HEPAC-93_EEF1A1_ORF1       |9    |459|450   |insertions  |inputs/RMSF/insertions/RMSF_HEPAC-93_EEF1A1_ORF1_0_ORF1.csv         |#fc030b|False   |
 
 
-- the RMSF means and 95% confidence interval by condition: `Macro-Domain_1020-ns_RMSF.svg`
+- the RMSF means and 95% confidence interval by condition: `Putative-Capping-Pore_1020-ns_RMSF.svg`
 
-![RMSF plot](doc/_static/Macro-Domain_1020-ns_RMSF.svg)
+![RMSF plot](doc/_static/Putative-Capping-Pore_1020-ns_RMSF.svg)
+
+**The duplication group has only one sample because the 3 HEPAC-12-X_duplication samples, the length (449 AA) is different from the majority of the samples (450 AA).**
 
