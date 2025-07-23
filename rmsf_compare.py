@@ -10,6 +10,7 @@ __email__ = "jeanne.n@chu-toulouse.fr"
 __version__ = "1.0.0"
 
 import argparse
+from difflib import SequenceMatcher
 import logging
 import os
 import sys
@@ -59,7 +60,7 @@ def get_samples_data(directory_annotations, data_inputs, domain, out_dir):
 
     :param directory_annotations: the samples annotations file directory.
     :type: str
-    :param data_inputs: the input data of the script.
+    :param data_inputs: the input conditions data of the script.
     :type data_inputs: Pandas.Dataframe
     :param domain: the domain name.
     :type domain: str
@@ -81,9 +82,10 @@ def get_samples_data(directory_annotations, data_inputs, domain, out_dir):
     df = pd.DataFrame.from_dict(data)
     df = df.sort_values(by=["length"])
 
-    # get the conditions
+    # get the conditions, the colors and the RMSF file's paths
     conditions = []
-    path_rmsf = []
+    colors = []
+    paths_rmsf = []
     for _, row in df.iterrows():
         condition_found = False
         for _, row_input in data_inputs.iterrows():
@@ -92,14 +94,21 @@ def get_samples_data(directory_annotations, data_inputs, domain, out_dir):
                 for rmsf_file in os.listdir(dir_rmsf_condition):
                     if row["sample"] in rmsf_file:
                         conditions.append(row_input["condition"])
-                        path_rmsf.append(os.path.join(dir_rmsf_condition, rmsf_file))
+                        colors.append(row_input["color"])
+                        paths_rmsf.append(os.path.join(dir_rmsf_condition, rmsf_file))
                         condition_found = True
                         break
     df = df.assign(condition=conditions)
-    df = df.assign(path_rmsf=path_rmsf)
+    df = df.assign(path_rmsf=paths_rmsf)
+    df = df.assign(color=colors)
 
     # check if the sample is rejected because the domain has a different length than the majority
-    mode = df["length"].mode().values[0]
+    try:
+        mode = df["length"].mode().values[0]
+    except IndexError as ex:
+        logging.error(f"domain \"{domain}\" not found in the column \"domain\" of the annotations CSV files in "
+                      f"{directory_annotations}.")
+        sys.exit(1)
     rejected = []
     for _, row in df.iterrows():
         if row["length"] != mode:
@@ -125,6 +134,15 @@ def get_samples_data(directory_annotations, data_inputs, domain, out_dir):
                             f"Domains length file by sample: {path}")
     else:
         logging.info(f"Domains length file by sample: {path}")
+
+    # add the samples count in the condition column
+    counts = {}
+    df_not_rejected = df[~df.rejected]
+    for condition in df_not_rejected["condition"]:
+        counts[condition] = counts.get(condition, 0) + 1
+    for condition in counts.keys():
+        counts[condition] = f"{condition} ({counts[condition]})"
+    df["condition"] = df["condition"].map(counts)
 
     return df
 
@@ -171,7 +189,42 @@ def extract_rmsf_data(data_samples_domains, set_first_residue_to_one):
     return df_rmsf
 
 
-def plot_rmsf(src, out_dir, md_time, domain, df_input, fmt):
+def create_plot_palette(df_input, data_rmsf):
+    """
+    Create the plot palette for the legend with samples count by condition.
+
+    :param df_input: the script input conditions data.
+    :type df_input: Pandas.Dataframe
+    :param data_rmsf: the RMSF dataframe.
+    :type data_rmsf: Pandas.Dataframe
+    :return: the plot palette.
+    :rtype: dict
+    """
+    conditions_with_counts = set(data_rmsf["condition"])
+    palette = dict()
+    for condition_with_count in conditions_with_counts:
+        updated_condition = ""
+        color = ""
+        previous_match = ""
+        for _, row in df_input.iterrows():
+            match = SequenceMatcher(None, condition_with_count, row["condition"]).find_longest_match()
+            if match:
+                str_match = condition_with_count[match.a:match.a + match.size]
+                if len(str_match) > len(previous_match):
+                    updated_condition = condition_with_count
+                    color = row["color"]
+                    previous_match = str_match
+        if not updated_condition:
+            logging.error(f"no substring match for the conditions in the input file "
+                          f"{', '.join(df_input['condition'].to_list())}  and the updated condition with "
+                          f"the sample count: {condition_with_count}")
+            sys.exit(1)
+        palette[updated_condition] = color
+
+    return palette
+
+
+def plot_rmsf(src, out_dir, md_time, domain, palette, fmt):
     """
     Plot the RMSF samples data.
 
@@ -183,15 +236,11 @@ def plot_rmsf(src, out_dir, md_time, domain, df_input, fmt):
     :type: int
     :param domain: the domain name.
     :type: str
-    :param df_input: the iscript input data.
-    :type: Pandas.Dataframe
+    :param palette: the plot palette.
+    :type palette: dict
     :param fmt: the plot image format.
     :type; str
     """
-    # todo: ajout du compte par catégorie dans la légende
-    palette = dict()
-    for _, row in df_input.iterrows():
-        palette[row["condition"]] = row["color"]
     rmsf_ax = sns.lineplot(data=src, x="residue", y="RMSF", hue="condition", palette=palette)
     plot = rmsf_ax.get_figure()
     plt.suptitle(f"RMSF {domain} ({md_time} ns)", fontsize="large", fontweight="bold")
@@ -212,8 +261,9 @@ if __name__ == "__main__":
 
     Distributed on an "AS IS" basis without warranties or conditions of any kind, either express or implied.
 
-    Aggregate the RMSF data in one plot to compare between various conditions using the RMSF CSV files from the RMS 
-    analysis (https://github.com/njeanne/rms) and the domains annotations file. 
+    Aggregate the samples RMSF data in one plot to compare between various conditions using the RMSF CSV files from 
+    the RMS analysis (https://github.com/njeanne/rms) and the domains annotations file. The plot will draw the mean and 
+    95% confidence interval for the samples belonging to the same condition.
     """
     parser = argparse.ArgumentParser(description=descr, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-o", "--out", required=True, type=str, help="the path to the output directory.")
@@ -263,4 +313,5 @@ if __name__ == "__main__":
     input_df = pd.read_csv(args.input, sep=",")
     samples_domains = get_samples_data(args.annotations, input_df, args.domain, args.out)
     rmsf_extracted = extract_rmsf_data(samples_domains, args.reset_domain_positions)
-    plot_rmsf(rmsf_extracted, args.out, args.md_time, args.domain, input_df, args.format)
+    plot_palette = create_plot_palette(input_df, rmsf_extracted)
+    plot_rmsf(rmsf_extracted, args.out, args.md_time, args.domain, plot_palette, args.format)
