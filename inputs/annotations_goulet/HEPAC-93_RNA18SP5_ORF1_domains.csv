@@ -1,8 +1,8 @@
 domain,start,end,color,pymol color
 Putative Capping Pore nsP1,9,459,#0000b6,blue
 Metal Binding Domain nsP2,516,689,#02eded,green
-HVR,714,844,#ab0000,red
+HVR,714,843,#ab0000,red
 RNA18SP5 insertion,779,794,#ad4a63,raspberry
-Macro Domain nsP3,845,992,#e1e100,cyan
+Macro Domain nsP3,844,992,#e1e100,cyan
 Helicase nsP4,995,1274,#e77504,orange
 RdRp nsP5,1293,1751,#7a147a,magenta

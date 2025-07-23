@@ -1,1 +1,2 @@
-# rmsf_compare
+# Comparing the RMSF
+

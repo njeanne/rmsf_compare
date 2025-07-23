@@ -194,7 +194,7 @@ def plot_rmsf(src, out_dir, md_time, domain, df_input, fmt):
         palette[row["condition"]] = row["color"]
     rmsf_ax = sns.lineplot(data=src, x="residue", y="RMSF", hue="condition", palette=palette)
     plot = rmsf_ax.get_figure()
-    plt.suptitle(f"RMSF {md_time} ns: {domain}", fontsize="large", fontweight="bold")
+    plt.suptitle(f"RMSF {domain} ({md_time} ns)", fontsize="large", fontweight="bold")
     plt.xlabel("residue", fontweight="bold")
     plt.ylabel(f"RMSD (\u212B)", fontweight="bold")
     out_path_plot = os.path.join(out_dir, f"{domain.replace(' ', '-')}_{md_time}-ns_RMSF.{fmt}")
